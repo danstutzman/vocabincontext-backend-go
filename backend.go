@@ -86,19 +86,17 @@ func IfString(condition bool, then string, else_ string) string {
 }
 
 func main() {
-	type CommandLineArgs struct {
-		postgresCredentialsPath *string
-	}
-	args := CommandLineArgs{
-		postgresCredentialsPath: flag.String(
-			"postgres_credentials_path", "", "JSON file with username and password"),
-	}
+	args := struct {
+		postgresCredentialsPath string
+	}{}
+	flag.StringVar(&args.postgresCredentialsPath, "postgres_credentials_path", "",
+		"JSON file with username and password")
 	flag.Parse()
 
-	if *args.postgresCredentialsPath == "" {
+	if args.postgresCredentialsPath == "" {
 		log.Fatal("Missing -postgres_credentials_path")
 	}
-	postgresCredentialsFile, err := os.Open(*args.postgresCredentialsPath)
+	postgresCredentialsFile, err := os.Open(args.postgresCredentialsPath)
 	if err != nil {
 		log.Fatal(fmt.Errorf("Couldn't os.Open postgres_credentials: %s", err))
 	}
@@ -114,7 +112,7 @@ func main() {
 	decoder := json.NewDecoder(postgresCredentialsFile)
 	if err = decoder.Decode(&postgresCredentials); err != nil {
 		log.Fatalf("Error using decoder.Decode to parse JSON at %s: %s",
-			*args.postgresCredentialsPath, err)
+			args.postgresCredentialsPath, err)
 	}
 
 	dataSourceName := ""

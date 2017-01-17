@@ -88,13 +88,18 @@ func IfString(condition bool, then string, else_ string) string {
 func main() {
 	args := struct {
 		postgresCredentialsPath string
+		port                    int
 	}{}
 	flag.StringVar(&args.postgresCredentialsPath, "postgres_credentials_path", "",
 		"JSON file with username and password")
+	flag.IntVar(&args.port, "port", 0, "Port for web server to listen to")
 	flag.Parse()
 
 	if args.postgresCredentialsPath == "" {
 		log.Fatal("Missing -postgres_credentials_path")
+	}
+	if args.port == 0 {
+		log.Fatal("Missing -port")
 	}
 	postgresCredentialsFile, err := os.Open(args.postgresCredentialsPath)
 	if err != nil {
@@ -260,8 +265,8 @@ func main() {
 			writer.Write(aacBytes)
 		})
 
-	log.Println("Listening on :8080...")
-	http.ListenAndServe(":8080", nil)
+	log.Printf("Listening on :%d...", args.port)
+	http.ListenAndServe(fmt.Sprintf(":%d", args.port), nil)
 }
 
 func computeExcerptList(query string, translationByInput map[string]*Translation,

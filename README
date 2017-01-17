@@ -1,0 +1,3 @@
+- First run ~/dev/scrape-spanish-lyrics/go
+- Then word_ratings table comes from sort-spanish repo's rate_words2sql.rb
+

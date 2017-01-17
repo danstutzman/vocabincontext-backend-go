@@ -23,8 +23,6 @@ const RIGHT_DOUBLE_QUOTE = "\u201d"
 
 var YOUTUBE_VIDEO_ID_REGEX = regexp.MustCompile("^[a-zA-Z0-9_-]{11}$")
 
-var _, _ = fmt.Println()
-
 type ExcerptWord struct {
 	Before  *string `json:"before,omitempty"`
 	Word    *string `json:"word,omitempty"`

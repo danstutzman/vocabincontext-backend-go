@@ -1,0 +1,14 @@
+{
+	"comment": "",
+	"ignore": "",
+	"package": [
+		{
+			"checksumSHA1": "Sx3BkIwrtAzIi7CGMV1J2CcrRpU=",
+			"path": "github.com/lib/pq",
+			"revision": "8df6253d1317616f36b0c3740eb30c239a7372cb",
+			"revisionTime": "2017-01-03T19:20:09Z",
+			"tree": true
+		}
+	],
+	"rootPath": "github.com/danielstutzman/vocabincontext-backend-go"
+}

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -9,13 +10,15 @@ import (
 	"time"
 )
 
-func selectLineIdsForQuery(queryFilter string, db *sql.DB) ([]int, error) {
+func selectLineIdsForQuery(queryFilter string, db *sql.DB,
+	ctx context.Context) ([]int, error) {
+
 	logTimeElapsed("    selectLineIdsForQuery", time.Now())
 	lineIds := []int{}
 	query := `select line_id
 	  from line_words
   	where word_id in (select word_id from words where word = $1)`
-	rows, err := db.Query(query, queryFilter)
+	rows, err := db.QueryContext(ctx, query, queryFilter)
 	if err != nil {
 		return nil, fmt.Errorf("Error from db.Query: %s", err)
 	}
@@ -35,7 +38,9 @@ func selectLineIdsForQuery(queryFilter string, db *sql.DB) ([]int, error) {
 	return lineIds, nil
 }
 
-func selectLines(possibleLineIdsFilter []int, db *sql.DB) ([]*Line, error) {
+func selectLines(possibleLineIdsFilter []int, db *sql.DB,
+	ctx context.Context) ([]*Line, error) {
+
 	logTimeElapsed("    selectLines", time.Now())
 	lines := []*Line{}
 	var query string
@@ -56,7 +61,7 @@ func selectLines(possibleLineIdsFilter []int, db *sql.DB) ([]*Line, error) {
 	  from lines
   	where line_id in (%s)`, intSliceToSqlIn(possibleLineIdsFilter))
 	}
-	rows, err := db.Query(query)
+	rows, err := db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("Error from db.Query: %s", err)
 	}
@@ -242,7 +247,9 @@ func stringSliceToSqlIn(keys []string) string {
 	}
 }
 
-func selectLineWords(lineIds []int, db *sql.DB) ([]*LineWord, error) {
+func selectLineWords(lineIds []int, db *sql.DB,
+	ctx context.Context) ([]*LineWord, error) {
+
 	defer logTimeElapsed("    selectLineWords", time.Now())
 
 	lineWords := []*LineWord{}
@@ -257,7 +264,7 @@ func selectLineWords(lineIds []int, db *sql.DB) ([]*LineWord, error) {
 				from line_words
 				where line_id in (%s)
 				order by num_word_in_song`, intSliceToSqlIn(lineIds))
-	rows, err := db.Query(query)
+	rows, err := db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("Error from db.Query: %s", err)
 	}

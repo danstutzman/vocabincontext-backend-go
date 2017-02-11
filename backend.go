@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"flag"
@@ -141,7 +142,7 @@ func main() {
 
 	// Test out the database connection immediately to check the credentials
 	ignored := 0
-	err = db.QueryRow("SELECT 1").Scan(&ignored)
+	err = db.QueryRowContext(context.Background(), "SELECT 1").Scan(&ignored)
 	if err != nil {
 		log.Fatal(fmt.Errorf("Error from db.QueryRow: %s", err))
 	}
@@ -168,7 +169,7 @@ func main() {
 
 	// Precompute response for empty query
 	excerptListForEmptyQuery, err := computeExcerptList(
-		"", translationByInput, wordRatingByWord, db)
+		"", translationByInput, wordRatingByWord, db, context.Background())
 	if err != nil {
 		log.Fatal(fmt.Errorf("Error from computeExcerptList: %s", err))
 	}
@@ -184,6 +185,9 @@ func main() {
 
 	http.HandleFunc("/api/excerpt_list.json",
 		func(writer http.ResponseWriter, request *http.Request) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
 			query := request.FormValue("q")
 
 			var excerptList *ExcerptList
@@ -192,7 +196,7 @@ func main() {
 				excerptList = excerptListForEmptyQuery
 			} else {
 				excerptList, err = computeExcerptList(
-					query, translationByInput, wordRatingByWord, db)
+					query, translationByInput, wordRatingByWord, db, ctx)
 				if err != nil {
 					log.Fatal(fmt.Errorf("Error from computeExcerptList: %s", err))
 				}
@@ -270,20 +274,21 @@ func main() {
 }
 
 func computeExcerptList(query string, translationByInput map[string]*Translation,
-	wordRatingByWord map[string]*WordRating, db *sql.DB) (*ExcerptList, error) {
+	wordRatingByWord map[string]*WordRating, db *sql.DB,
+	context context.Context) (*ExcerptList, error) {
 
 	defer logTimeElapsed("  computeExcerptList", time.Now())
 
 	var possibleLineIdsFilter []int
 	var err error
 	if query != "" {
-		possibleLineIdsFilter, err = selectLineIdsForQuery(query, db)
+		possibleLineIdsFilter, err = selectLineIdsForQuery(query, db, context)
 		if err != nil {
 			return nil, fmt.Errorf("Error from selectLineIdsForQuery: %s", err)
 		}
 	}
 
-	lines, err := selectLines(possibleLineIdsFilter, db)
+	lines, err := selectLines(possibleLineIdsFilter, db, context)
 	if err != nil {
 		return nil, fmt.Errorf("Error from selectLines: %s", err)
 	}
@@ -298,7 +303,7 @@ func computeExcerptList(query string, translationByInput map[string]*Translation
 		lineIds = append(lineIds, line.line_id)
 	}
 
-	lineWords, err := selectLineWords(lineIds, db)
+	lineWords, err := selectLineWords(lineIds, db, context)
 	if err != nil {
 		return nil, fmt.Errorf("Error from selectLineWords: %s", err)
 	}

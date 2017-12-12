@@ -109,10 +109,12 @@ func main() {
 	defer postgresCredentialsFile.Close()
 
 	type PostgresCredentials struct {
+		Host         *string
+		Port         *string
+		SSLMode      *string
 		Username     *string
 		Password     *string
 		DatabaseName *string
-		SSLMode      *string
 	}
 	postgresCredentials := PostgresCredentials{}
 	decoder := json.NewDecoder(postgresCredentialsFile)
@@ -122,6 +124,15 @@ func main() {
 	}
 
 	dataSourceName := ""
+	if postgresCredentials.Host != nil {
+		dataSourceName += " host=" + *postgresCredentials.Host
+	}
+	if postgresCredentials.Port != nil {
+		dataSourceName += " port=" + *postgresCredentials.Port
+	}
+	if postgresCredentials.SSLMode != nil {
+		dataSourceName += " sslmode=" + *postgresCredentials.SSLMode
+	}
 	if postgresCredentials.Username != nil {
 		dataSourceName += " user=" + *postgresCredentials.Username
 	}
@@ -130,9 +141,6 @@ func main() {
 	}
 	if postgresCredentials.DatabaseName != nil {
 		dataSourceName += " dbname=" + *postgresCredentials.DatabaseName
-	}
-	if postgresCredentials.SSLMode != nil {
-		dataSourceName += " sslmode=" + *postgresCredentials.SSLMode
 	}
 
 	db, err := sql.Open("postgres", dataSourceName)

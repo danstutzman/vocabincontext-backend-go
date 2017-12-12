@@ -233,11 +233,24 @@ func main() {
 					request.FormValue("end_millis"), err))
 			}
 
-			excerptPath := fmt.Sprintf("/tmp/youtube_22050_mono/excerpt-%d-%d.aac",
-				beginMillis, endMillis)
-			_22050MonoM4aPath := fmt.Sprintf("/tmp/youtube_22050_mono/%s.m4a",
+			_22050MonoWavPath := fmt.Sprintf("/tmp/youtube_22050_mono/%s.wav",
 				youtubeVideoIdSafe)
 			os.MkdirAll("/tmp/youtube_22050_mono", 0700)
+
+			youtubeDlBin := "/usr/local/bin/youtube-dl"
+			commandArgs := []string{
+				"http://www.youtube.com/watch?v=" + youtubeVideoIdSafe,
+				"--extract-audio",
+				"--audio-format", "wav",
+				"-o", _22050MonoWavPath,
+			}
+			log.Printf("Running %s %s...",
+				youtubeDlBin, strings.Join(commandArgs, " "))
+			_, err = exec.Command(youtubeDlBin, commandArgs...).Output()
+			if err != nil {
+				log.Fatal(fmt.Errorf("Error from executing %s %s: %s",
+					youtubeDlBin, strings.Join(commandArgs, " "), err))
+			}
 
 			var avconvBin string
 			if _, err := os.Stat("/usr/local/bin/ffmpeg"); !os.IsNotExist(err) {
@@ -248,15 +261,18 @@ func main() {
 				log.Fatal(fmt.Errorf("Can't find avconv binary"))
 			}
 
+			excerptPath := fmt.Sprintf("/tmp/youtube_22050_mono/excerpt-%d-%d.aac",
+				beginMillis, endMillis)
 			beginTime := float32(beginMillis) / 1000.0
 			durationTime := float32(endMillis)/1000.0 - beginTime
-			commandArgs := []string{
-				"-i", _22050MonoM4aPath,
-				"-acodec", "copy",
+			commandArgs = []string{
+				"-i", _22050MonoWavPath,
+				//				"-acodec", "copy",
 				"-ss", fmt.Sprintf("%f", beginTime),
 				"-t", fmt.Sprintf("%f", durationTime),
 				"-y", excerptPath,
 			}
+			log.Printf("Running %s %s...", avconvBin, strings.Join(commandArgs, " "))
 			_, err = exec.Command(avconvBin, commandArgs...).Output()
 			if err != nil {
 				log.Fatal(fmt.Errorf("Error from executing %s %s: %s",

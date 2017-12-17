@@ -21,7 +21,9 @@ import (
 
 const LEFT_DOUBLE_QUOTE = "\u201c"
 const RIGHT_DOUBLE_QUOTE = "\u201d"
+const SECONDS_IN_A_YEAR = "2592000"
 
+var LONG_CACHE_REGEX = regexp.MustCompile(`^.+\.[0-9a-f]{5}\.(css|js)$`)
 var YOUTUBE_VIDEO_ID_REGEX = regexp.MustCompile("^[a-zA-Z0-9_-]{11}$")
 
 type ExcerptWord struct {
@@ -90,10 +92,13 @@ func main() {
 	args := struct {
 		postgresCredentialsPath string
 		port                    int
+		staticPath              string
 	}{}
 	flag.StringVar(&args.postgresCredentialsPath, "postgres_credentials_path", "",
 		"JSON file with username and password")
 	flag.IntVar(&args.port, "port", 0, "Port for web server to listen to")
+	flag.StringVar(&args.staticPath, "static_path", "",
+		"Path to directory containing index.html")
 	flag.Parse()
 
 	if args.postgresCredentialsPath == "" {
@@ -101,6 +106,9 @@ func main() {
 	}
 	if args.port == 0 {
 		log.Fatal("Missing -port")
+	}
+	if args.staticPath == "" {
+		log.Fatal("Missing -static_path")
 	}
 	postgresCredentialsFile, err := os.Open(args.postgresCredentialsPath)
 	if err != nil {
@@ -190,6 +198,22 @@ func main() {
 			"Accept, Content-Type, Content-Length, Accept-Encoding, "+
 				"X-CSRF-Token, Authorization")
 	}
+
+	staticServer := http.FileServer(http.Dir(args.staticPath))
+	http.Handle("/",
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			diskPath := args.staticPath + r.URL.Path
+			if _, err := os.Stat(diskPath); !os.IsNotExist(err) {
+				if LONG_CACHE_REGEX.MatchString(r.URL.Path) {
+					w.Header().Set("Pragma", "public")
+					w.Header().Set("Cache-Control",
+						"max-age="+SECONDS_IN_A_YEAR+", public")
+					w.Header().Set("Expires",
+						time.Now().AddDate(1, 0, 0).Format(http.TimeFormat))
+				}
+			}
+			staticServer.ServeHTTP(w, r)
+		}))
 
 	http.HandleFunc("/api/excerpt_list.json",
 		func(writer http.ResponseWriter, request *http.Request) {
